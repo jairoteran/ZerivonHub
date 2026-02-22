@@ -7,15 +7,7 @@
 local LoaderCore = {}
 
 local BASE = "https://raw.githubusercontent.com/jairoteran/ZerivonLoader/main/"
-local _notificationsEnabled = true
 local _loadedScripts = {}
-
--- =========================================
---  Control de notificaciones
--- =========================================
-function LoaderCore.SetNotifications(state)
-    _notificationsEnabled = state
-end
 
 -- =========================================
 --  Retorna lista de scripts cargados
@@ -36,30 +28,41 @@ end
 --  Retorna: success (bool), error (string)
 -- =========================================
 function LoaderCore.Execute(scriptData)
-    local url = BASE .. scriptData.URL
 
-    -- Validacion de URL
-    if not url or url == "" then
+    -- Validacion de URL antes de cualquier request
+    if not scriptData.URL or scriptData.URL == "" then
         return false, "URL vacia"
     end
+
+    local url = BASE .. scriptData.URL
 
     -- Fetch
     local fetchOk, src = pcall(function()
         return game:HttpGet(url, true)
     end)
 
-    if not fetchOk or not src or src == "" then
+    if not fetchOk then
         return false, "Error de red: " .. tostring(src)
     end
 
-    if src:find("404") then
+    if not src or src == "" then
+        return false, "Respuesta vacia"
+    end
+
+    -- Detecta 404 de GitHub
+    if src:sub(1, 3) == "404" then
         return false, "Script no encontrado (404)"
     end
 
     -- Compilacion
     local compOk, fn = pcall(loadstring, src)
-    if not compOk or type(fn) ~= "function" then
+
+    if not compOk then
         return false, "Error de compilacion: " .. tostring(fn)
+    end
+
+    if type(fn) ~= "function" then
+        return false, "Compilacion retorno nil — verifica que el script sea Lua valido"
     end
 
     -- Ejecucion
@@ -75,8 +78,8 @@ end
 
 -- =========================================
 --  Ejecuta todos los scripts de un juego
---  Retorna: resultados tabla
---  { name, success, error }
+--  Retorna: tabla de resultados
+--  { Name, Success, Error, Skipped }
 -- =========================================
 function LoaderCore.ExecuteAll(gameData)
     local results = {}
@@ -88,6 +91,7 @@ function LoaderCore.ExecuteAll(gameData)
                 Name    = scriptData.Name,
                 Success = ok,
                 Error   = err,
+                Skipped = false,
             })
         else
             table.insert(results, {
