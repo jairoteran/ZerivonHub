@@ -29,7 +29,7 @@ end
 -- =========================================
 function LoaderCore.Execute(scriptData)
 
-    -- Validacion de URL antes de cualquier request
+-- Validacion de URL antes de cualquier request
     if not scriptData.URL or scriptData.URL == "" then
         return false, "URL vacia"
     end
@@ -54,15 +54,17 @@ function LoaderCore.Execute(scriptData)
         return false, "Script no encontrado (404)"
     end
 
-    -- Compilacion
-    local compOk, fn = pcall(loadstring, src)
-
-    if not compOk then
-        return false, "Error de compilacion: " .. tostring(fn)
+    -- Verifica que el contenido sea Lua valido antes de compilar
+    -- loadstring retorna nil (sin error) cuando el contenido es texto plano
+    local testOk, testFn = pcall(loadstring, src)
+    if not testOk or type(testFn) ~= "function" then
+        return false, "Contenido no es Lua valido"
     end
 
-    if type(fn) ~= "function" then
-        return false, "Contenido no es Lua valido"
+    -- Compilacion final
+    local compOk, fn = pcall(loadstring, src)
+    if not compOk or type(fn) ~= "function" then
+        return false, "Error de compilacion"
     end
 
     -- Ejecucion
