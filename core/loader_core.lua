@@ -62,8 +62,18 @@ function LoaderCore.Execute(scriptData)
     end
 
     if type(fn) ~= "function" then
-        -- loadstring retorno nil — el contenido no es Lua valido
-        return false, "Contenido no es Lua valido (texto plano o binario)"
+        return false, "Contenido no es Lua valido"
+    end
+
+    -- Ejecucion
+    local execOk, err = pcall(fn)
+    if not execOk then
+        return false, "Error de ejecucion: " .. tostring(err)
+    end
+
+    -- Exito
+    _loadedScripts[scriptData.Name] = true
+    return true, nil
 end
 
 -- =========================================
