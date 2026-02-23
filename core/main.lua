@@ -7,7 +7,14 @@
 local BASE = "https://raw.githubusercontent.com/jairoteran/ZerivonLoader/main/"
 
 local function Load(path)
-    return loadstring(game:HttpGet(BASE .. path, true))()
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(BASE .. path, true))()
+    end)
+    if not success then
+        warn("[Zerivon] Error cargando " .. path .. ": " .. tostring(result))
+        return nil
+    end
+    return result
 end
 
 -- =========================================
@@ -75,7 +82,6 @@ end
 
 -- =========================================
 --  8. USERCONFIG — aplica preferencias
---     de scripts del usuario al gameData
 -- =========================================
 if detectedGame then
     for _, scriptData in ipairs(detectedGame.Scripts) do
@@ -83,12 +89,13 @@ if detectedGame then
             detectedGame.Name,
             scriptData.Name
         )
-        scriptData.Enabled = userEnabled
+        -- Si no hay config previa, podrías dejarlo true por defecto o usar scriptData.Enabled
+        scriptData.Enabled = (userEnabled ~= nil) and userEnabled or scriptData.Enabled
     end
 end
 
 -- =========================================
---  9. EJECUCION DE SCRIPTS
+--  9. EJECUCION DE SCRIPTS Y CONEXIÓN UI
 -- =========================================
 if detectedGame then
     print("[Zerivon] " .. Lang.Get("GAME_LOADING"))
@@ -96,10 +103,22 @@ if detectedGame then
 
     for _, result in ipairs(results) do
         UI.AddScriptResult(result, Lang)
+        
+        -- Logs de consola
         if result.Skipped then
             print("[Zerivon] SKIP → " .. result.Name)
         elseif result.Success then
             print("[Zerivon] OK   → " .. result.Name)
+            
+            -- INTEGRACIÓN ESPECÍFICA CON LA UI
+            -- Si el script cargado es Blade Ball y devolvió su API (ReturnValue)
+            if detectedGame.Name == "Blade Ball" and result.Name == "AutoParry" then
+                if result.ReturnValue and type(result.ReturnValue) == "table" then
+                    UI.BuildBladeBall(result.ReturnValue, Lang)
+                end
+            end
+            -- Aquí puedes añadir más juegos: elseif detectedGame.Name == "Arsenal" then ...
+            
         else
             print("[Zerivon] FAIL → " .. result.Name .. " | " .. tostring(result.Error))
         end

@@ -171,4 +171,80 @@ function UI.Destroy()
     end
 end
 
+
+-- =========================================
+--  Interfaz específica para Blade Ball
+-- =========================================
+function UI.BuildBladeBall(AutoParry, Lang)
+    if not _tabs.Main then return end
+    
+    -- Creamos un nuevo grupo para los controles del juego
+    local GameBox = _tabs.Main:AddRightGroupbox("Blade Ball - Auto Parry")
+
+    -- Toggle Principal
+    GameBox:AddToggle("BB_Enabled", {
+        Text = "Enable Auto Parry",
+        Default = AutoParry.GetConfig().Enabled,
+        Tooltip = "Activa o desactiva el parry automático",
+        Callback = function(Value)
+            AutoParry.SetEnabled(Value)
+        end
+    })
+
+    -- Slider de Distancia
+    GameBox:AddSlider("BB_Distance", {
+        Text = "Detection Distance",
+        Default = AutoParry.GetConfig().Distance,
+        Min = 10,
+        Max = 100,
+        Rounding = 1,
+        Compact = false,
+        Callback = function(Value)
+            AutoParry.SetDistance(Value)
+        end
+    })
+
+    -- Slider de Precisión (Humanización)
+    GameBox:AddSlider("BB_Precision", {
+        Text = "Precision (Legit)",
+        Default = AutoParry.GetConfig().Precision * 100,
+        Min = 0,
+        Max = 100,
+        Rounding = 0,
+        Suffix = "%",
+        Callback = function(Value)
+            AutoParry.SetPrecision(Value / 100)
+        end
+    })
+
+    -- Toggle de Visuales (ESP)
+    GameBox:AddToggle("BB_ESP", {
+        Text = "Ball Highlighting",
+        Default = AutoParry.GetConfig().HighlightBall,
+        Callback = function(Value)
+            AutoParry.SetESP(Value)
+        end
+    }):AddColorPicker("BB_BallColor", {
+        Default = AutoParry.GetConfig().BallColor,
+        Title = "Ball Color",
+        Callback = function(Value)
+            AutoParry.SetBallColor(Value)
+        end
+    })
+
+    -- Keybind para el Parry manual o configuración
+    GameBox:AddLabel("Manual Key"):AddKeyPicker("BB_Key", {
+        Default = "F",
+        SyncToggleState = false,
+        Mode = "Always",
+        Text = "Parry Key",
+        NoUI = false,
+        Callback = function(Value)
+            AutoParry.SetKey(Value)
+        end
+    })
+
+    print("[UI] Blade Ball Tab Built")
+end
+
 return UI
