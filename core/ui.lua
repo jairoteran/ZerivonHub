@@ -276,12 +276,10 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     local boxL = tab:AddLeftGroupbox("General")
 
-    -- Muestra la tecla actual
     local savedKey = UserConfig.Get("toggleKey") or "RightShift"
-    -- Variable para trackear la tecla mostrada
-    local currentKey = savedKey
 
-    boxL:AddLabel("Toggle Key: " .. currentKey)
+    -- Label que se actualiza
+    local keyLabelObj = boxL:AddLabel("Toggle Key: " .. savedKey)
 
     boxL:AddButton({
         Text = "Set Toggle Key (press after click)",
@@ -304,39 +302,18 @@ function UI.BuildSettings(Config, Lang, UserConfig)
                 UserConfig.Set("toggleKey", keyName)
                 UserConfig.Save()
 
+                -- Actualiza el label
+                pcall(function()
+                    for _, v in ipairs(keyLabelObj:GetDescendants()) do
+                        if v:IsA("TextLabel") then
+                            v.Text = "Toggle Key: " .. keyName
+                            break
+                        end
+                    end
+                end)
+
                 if _library then
                     _library:Notify("Toggle Key → " .. keyName, 2)
-                end
-            end)
-        end
-    })
-
-    -- Boton para capturar tecla
-    boxL:AddButton({
-        Text = "Set Toggle Key (press after click)",
-        Func = function()
-            if _listening then return end
-            _listening = true
-            if _library then
-                _library:Notify("Press any key to set as toggle key...", 3)
-            end
-
-            local UIS = game:GetService("UserInputService")
-            local conn
-            conn = UIS.InputBegan:Connect(function(input, processed)
-                if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-                local keyName = input.KeyCode.Name
-                conn:Disconnect()
-                _listening = false
-
-                -- Aplica
-                ApplyToggleKey(keyName)
-                UserConfig.Set("toggleKey", keyName)
-                UserConfig.Save()
-
-
-                if _library then
-                    _library:Notify("Toggle Key set to: " .. keyName, 2)
                 end
             end)
         end
@@ -355,7 +332,6 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         end
     })
 
-    -- Aplica el keybind guardado
     if savedKey ~= "RightShift" and savedKey ~= "RightControl" then
         task.delay(0.5, function()
             ApplyToggleKey(savedKey)
