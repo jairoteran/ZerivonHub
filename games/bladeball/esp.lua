@@ -220,21 +220,32 @@ local function UpdatePlayerESP()
             continue
         end
         local char = player.Character
-        if not char then continue end
+        if not char then
+            data.hl.Enabled = false
+            data.bb.Enabled = false
+            continue
+        end
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
+        if not hrp then
+            data.hl.Enabled = false
+            data.bb.Enabled = false
+            continue
+        end
 
         local dist = myHRP and math.floor((myHRP.Position - hrp.Position).Magnitude) or 0
         local visible = Config.ShowPlayers and Config.Enabled and dist <= Config.MaxDistance
         data.hl.Enabled = visible
         data.bb.Enabled = visible
+
+        -- FillTransp siempre se aplica independiente de visibilidad
+        data.hl.FillTransparency = Config.FillTransp
+
         if not visible then continue end
 
         local isTarget = targets[player.Name] == true
         local color = isTarget and Config.TargetColor or Config.EnemyColor
         data.hl.OutlineColor      = color
         data.hl.FillColor         = color
-        data.hl.FillTransparency  = Config.FillTransp
         data.nameL.TextColor3     = color
         data.nameL.Text           = player.Name
         data.nameL.Visible        = Config.ShowNames

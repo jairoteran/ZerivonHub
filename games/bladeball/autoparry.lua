@@ -139,6 +139,8 @@ function AutoParry.SetLog(v)       Config.ShowLog   = v end
 function AutoParry.GetStats()      return { count = _count, success = _success, ping = math.floor(ping) } end
 function AutoParry.GetConfig()     return Config end
 function AutoParry.IsEnabled()     return Config.Enabled end
+function AutoParry.SetParryRadius(r) PARRY_RADIUS = r end
+function AutoParry.GetParryRadius()  return PARRY_RADIUS end
 
 AutoParry.Start()
 return AutoParry
