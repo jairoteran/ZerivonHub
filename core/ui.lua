@@ -268,18 +268,24 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     local boxL = tab:AddLeftGroupbox("General")
 
-    boxL:AddDropdown("ZV_ToggleKey", {
-        Text    = "Toggle Menu Key",
-        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home", "End"},
+    -- Toggle key via AddToggle + AddKeyPicker
+    local toggleToggle = boxL:AddToggle("ZV_MenuToggle", {
+        Text    = "Menu Toggle Key",
+        Default = false,
+    })
+
+    local keyPicker = toggleToggle:AddKeyPicker("ZV_ToggleKeyPicker", {
+        Text    = "Menu Key",
         Default = UserConfig.Get("toggleKey") or "RightShift",
-        Callback = function(value)
-            UserConfig.Set("toggleKey", value)
+        Changed = function(value)
+            local keyName = tostring(value.Name or value)
+            UserConfig.Set("toggleKey", keyName)
             UserConfig.Save()
-            if _library then
-                _library:Notify("Toggle Key → " .. value .. "\nRestart to apply", 2)
-            end
         end
     })
+
+    -- Asignamos el keypicker como ToggleKeybind
+    _library.ToggleKeybind = keyPicker
 
     boxL:AddDropdown("ZV_Language", {
         Text     = "Language",
@@ -297,7 +303,6 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
-    boxR:AddLabel("Toggle: " .. (UserConfig.Get("toggleKey") or "RightShift"))
 
     print("[UI] Settings OK")
 end
