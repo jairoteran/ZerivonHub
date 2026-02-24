@@ -10,12 +10,21 @@ local _window  = nil
 local _tabs    = {}
 
 local function LoadLinoria()
-    local Library = loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua", true))()
-    local ThemeManager = loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/ThemeManager.lua", true))()
-    local SaveManager = loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/SaveManager.lua", true))()
+    local ok1, Library = pcall(function()
+        return loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua", true))()
+    end)
+    local ok2, ThemeManager = pcall(function()
+        return loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/ThemeManager.lua", true))()
+    end)
+    local ok3, SaveManager = pcall(function()
+        return loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/SaveManager.lua", true))()
+    end)
+    if not ok1 then error("Library failed: " .. tostring(Library)) end
+    if not ok2 then error("ThemeManager failed: " .. tostring(ThemeManager)) end
+    if not ok3 then error("SaveManager failed: " .. tostring(SaveManager)) end
     return Library, ThemeManager, SaveManager
 end
 
