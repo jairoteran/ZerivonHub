@@ -267,6 +267,14 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     local boxL = tab:AddLeftGroupbox("General")
 
+    -- Toggle manual de la UI
+    boxL:AddButton({
+        Text = "Toggle Menu",
+        Func = function()
+            if _library then _library:Toggle() end
+        end
+    })
+
     boxL:AddDropdown("ZV_Language", {
         Text     = "Idioma / Language",
         Values   = Lang.Available(),
@@ -274,22 +282,28 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         Callback = function(value)
             UserConfig.Set("language", value)
             UserConfig.Save()
+            if _library then
+                _library:Notify("Idioma cambiado a " .. value .. "\nReinicia para aplicar", 3)
+            end
         end
     })
 
     boxL:AddDropdown("ZV_ToggleKey", {
         Text    = "Toggle Key",
-        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home"},
+        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home", "End"},
         Default = UserConfig.Get("toggleKey") or "RightShift",
         Callback = function(value)
             UserConfig.Set("toggleKey", value)
             UserConfig.Save()
-            _library.ToggleKeybind = Enum.KeyCode[value]
+            if _library then
+                _library.ToggleKeybind = Enum.KeyCode[value]
+                _library:Notify("Toggle Key → " .. value, 2)
+            end
         end
     })
 
     boxL:AddToggle("ZV_AutoHide", {
-        Text     = "Auto Hide",
+        Text     = "Auto Hide al cargar",
         Default  = UserConfig.Get("autoHide") or false,
         Callback = function(value)
             UserConfig.Set("autoHide", value)
@@ -297,40 +311,33 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         end
     })
 
+    boxL:AddSlider("ZV_AutoHideDelay", {
+        Text     = "Auto Hide Delay",
+        Min      = 1,
+        Max      = 30,
+        Default  = UserConfig.Get("autoHideDelay") or 6,
+        Suffix   = "s",
+        Rounding = 0,
+        Callback = function(value)
+            UserConfig.Set("autoHideDelay", value)
+            UserConfig.Save()
+        end
+    })
+
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
+    boxR:AddLabel("Loaded: Blade Ball")
+    boxR:AddButton({
+        Text = "Discord",
+        Func = function()
+            if _library then
+                _library:Notify("Discord: discord.gg/zerivon", 4)
+            end
+        end
+    })
 
     print("[UI] Settings OK")
-end
-
-function UI.SetGame(gameName)
-    if not _library then return end
-    _library:SetWatermark("Zerivon | " .. gameName)
-end
-
-function UI.Notify(title, message, duration)
-    if not _library then return end
-    _library:Notify(title .. "\n" .. message, duration or 3)
-end
-
-function UI.StartAutoHide(delay)
-    task.delay(delay or 6, function()
-        if _library then
-            _library:SetWatermarkVisibility(false)
-            _library:Toggle()
-        end
-    end)
-end
-
-function UI.Destroy()
-    if _library then
-        _library:Unload()
-        _library = nil
-        _window  = nil
-        _tabs    = {}
-        print("[UI] Destruida OK")
-    end
 end
 
 return UI
