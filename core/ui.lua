@@ -147,6 +147,15 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Default  = true,
             Callback = function(v) AP.SetLog(v) end
         })
+
+        boxL:AddSlider("AP_Radius", {
+            Text     = "Parry Radius",
+            Min      = 5,
+            Max      = 50,
+            Default  = 15,
+            Rounding = 0,
+            Callback = function(v) AP.SetParryRadius(v) end
+        })
     end
 
     -- ===== ESP =====
@@ -209,19 +218,9 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Max      = 60,
             Default  = cfg.RadiusSize,
             Rounding = 0,
-            Callback = function(v)
-                ESP.SetRadiusSize(v)
-            end
-
-        boxL:AddSlider("AP_Radius", {
-        Text     = "Parry Radius",
-        Min      = 5,
-        Max      = 50,
-        Default  = 15,
-        Rounding = 0,
-        Callback = function(v) AP.SetParryRadius(v) end
+             Callback = function(v)
+                ESP.SetRadiusSize(v) end
         })
-    })
 
         local boxR2 = tab:AddRightGroupbox("ESP Colors")
 
