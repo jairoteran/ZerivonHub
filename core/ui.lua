@@ -1,19 +1,14 @@
 -- =========================================
 --  Zerivon Loader by Khayro
 --  core/ui.lua
---  Interfaz con Linoria
 -- =========================================
 
 local UI = {}
 
-local _library    = nil
-local _window     = nil
-local _tabs       = {}
-local _groupboxes = {}
+local _library  = nil
+local _window   = nil
+local _tabs     = {}
 
--- =========================================
---  Carga Linoria
--- =========================================
 local function LoadLinoria()
     local Library = loadstring(game:HttpGet(
         "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua", true))()
@@ -24,9 +19,6 @@ local function LoadLinoria()
     return Library, ThemeManager, SaveManager
 end
 
--- =========================================
---  Inicializa la UI
--- =========================================
 function UI.Init(Config, Lang)
     local Library, ThemeManager, SaveManager = LoadLinoria()
     _library = Library
@@ -35,7 +27,7 @@ function UI.Init(Config, Lang)
     Library:SetWatermarkVisibility(true)
 
     _window = Library:CreateWindow({
-        Title    = Config.Name,
+        Title    = Config.Name .. " v" .. Config.Version,
         Center   = true,
         AutoShow = Config.UI.ShowOnLoad,
     })
@@ -49,92 +41,231 @@ function UI.Init(Config, Lang)
     SaveManager:SetLibrary(Library)
     SaveManager:SetFolder("ZerivonLoader")
 
-    _tabs.Main     = _window:AddTab(Lang.Get("GAME_LOADING"))
-    _tabs.Settings = _window:AddTab("Settings")
-
-    _groupboxes.Main = _tabs.Main:AddLeftGroupbox(Config.Name)
-    _groupboxes.Main:AddLabel(Config.Name .. "  v" .. Config.Version)
-    _groupboxes.Main:AddLabel(Lang.Get("UI_AUTHOR") .. " " .. Config.Author)
-
     print("[UI] Inicializada OK")
     return true
 end
 
 -- =========================================
---  Muestra el juego detectado
+--  Tab dinamico por juego
+--  scripts = { AutoParry = module, ESP = module }
 -- =========================================
-function UI.SetGame(gameName, Lang)
-    if not _groupboxes.Main then return end
-    _groupboxes.Main:AddLabel(Lang.Get("GAME_DETECTED") .. ": " .. gameName)
-end
+function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
+    if not _window then return end
 
--- =========================================
---  Agrega resultado de script
--- =========================================
-function UI.AddScriptResult(result, Lang)
-    if not _groupboxes.Main then return end
+    -- Tab con nombre del juego
+    local tab = _window:AddTab(gameName)
+    _tabs[gameName] = tab
 
-    local status
-    if result.Skipped then
-        status = "[" .. Lang.Get("SCRIPT_SKIP") .. "]"
-    elseif result.Success then
-        status = "[" .. Lang.Get("SCRIPT_OK") .. "]"
-    else
-        status = "[" .. Lang.Get("SCRIPT_FAIL") .. "]"
+    -- ===== AUTO PARRY =====
+    if scripts.AutoParry then
+        local AP = scripts.AutoParry
+        local cfg = AP.GetConfig()
+
+        local boxL = tab:AddLeftGroupbox("Auto Parry")
+
+        boxL:AddToggle("AP_Enabled", {
+            Text     = "Enabled",
+            Default  = cfg.Enabled,
+            Callback = function(v) AP.SetEnabled(v) end
+        })
+
+        boxL:AddSlider("AP_Precision", {
+            Text    = "Precision",
+            Min     = 0,
+            Max     = 100,
+            Default = math.floor(cfg.Precision * 100),
+            Suffix  = "%",
+            Rounding = 0,
+            Callback = function(v) AP.SetPrecision(v / 100) end
+        })
+
+        boxL:AddSlider("AP_Delay", {
+            Text    = "Max Delay (ms)",
+            Min     = 0,
+            Max     = 500,
+            Default = math.floor(cfg.MaxDelay * 1000),
+            Suffix  = "ms",
+            Rounding = 0,
+            Callback = function(v) cfg.MaxDelay = v / 1000 end
+        })
+
+        boxL:AddDropdown("AP_Key", {
+            Text   = "Parry Key",
+            Values = {"F", "Q", "E", "R", "T", "G", "V", "B"},
+            Default = "F",
+            Callback = function(v)
+                AP.SetKey(Enum.KeyCode[v])
+            end
+        })
+
+        boxL:AddToggle("AP_Log", {
+            Text     = "Show Log",
+            Default  = cfg.ShowLog,
+            Callback = function(v) AP.SetLog(v) end
+        })
     end
 
-    _groupboxes.Main:AddLabel(result.Name .. "  " .. status)
+    -- ===== ESP =====
+    if scripts.ESP then
+        local ESP = scripts.ESP
+        local cfg = ESP.GetConfig()
+
+        local boxR = tab:AddRightGroupbox("ESP")
+
+        boxR:AddToggle("ESP_Enabled", {
+            Text     = "Enabled",
+            Default  = cfg.Enabled,
+            Callback = function(v) ESP.SetEnabled(v) end
+        })
+
+        boxR:AddToggle("ESP_Players", {
+            Text     = "Players",
+            Default  = cfg.ShowPlayers,
+            Callback = function(v) cfg.ShowPlayers = v end
+        })
+
+        boxR:AddToggle("ESP_Names", {
+            Text     = "Names",
+            Default  = cfg.ShowNames,
+            Callback = function(v) ESP.SetShowNames(v) end
+        })
+
+        boxR:AddToggle("ESP_Distance", {
+            Text     = "Distance",
+            Default  = cfg.ShowDistance,
+            Callback = function(v) ESP.SetShowDistance(v) end
+        })
+
+        boxR:AddSlider("ESP_MaxDist", {
+            Text     = "Max Distance",
+            Min      = 50,
+            Max      = 1000,
+            Default  = cfg.MaxDistance,
+            Suffix   = "m",
+            Rounding = 0,
+            Callback = function(v) ESP.SetMaxDistance(v) end
+        })
+
+        boxR:AddToggle("ESP_Balls", {
+            Text     = "Ball ESP",
+            Default  = cfg.ShowBalls,
+            Callback = function(v) ESP.SetBallESP(v) end
+        })
+
+        boxR:AddToggle("ESP_Radius", {
+            Text     = "Radius Circle",
+            Default  = cfg.ShowRadius,
+            Callback = function(v) ESP.SetRadius(v) end
+        })
+
+        boxR:AddSlider("ESP_RadiusSize", {
+            Text     = "Radius Size",
+            Min      = 5,
+            Max      = 60,
+            Default  = cfg.RadiusSize,
+            Rounding = 0,
+            Callback = function(v) ESP.SetRadiusSize(v) end
+        })
+
+        -- Colores
+        local boxR2 = tab:AddRightGroupbox("Colores")
+
+        boxR2:AddLabel("Enemy Color")
+        boxR2:AddColorPicker("ESP_EnemyColor", {
+            Default  = cfg.EnemyColor,
+            Callback = function(v) ESP.SetEnemyColor(v) end
+        })
+
+        boxR2:AddLabel("Target Color (pelota dirigida)")
+        boxR2:AddColorPicker("ESP_TargetColor", {
+            Default  = cfg.TargetColor,
+            Callback = function(v) ESP.SetTargetColor(v) end
+        })
+
+        boxR2:AddLabel("Ball Color")
+        boxR2:AddColorPicker("ESP_BallColor", {
+            Default  = cfg.BallColor,
+            Callback = function(v) ESP.SetBallColor(v) end
+        })
+
+        boxR2:AddLabel("Ball Target Color")
+        boxR2:AddColorPicker("ESP_BallTargetColor", {
+            Default  = cfg.BallTargetColor,
+            Callback = function(v) ESP.SetBallTargetColor(v) end
+        })
+
+        boxR2:AddLabel("Radius Color")
+        boxR2:AddColorPicker("ESP_RadiusColor", {
+            Default  = cfg.RadiusColor,
+            Callback = function(v) ESP.SetRadiusColor(v) end
+        })
+
+        boxR2:AddSlider("ESP_FillTransp", {
+            Text     = "Fill Transparency",
+            Min      = 0,
+            Max      = 100,
+            Default  = math.floor(cfg.FillTransp * 100),
+            Suffix   = "%",
+            Rounding = 0,
+            Callback = function(v) ESP.SetFillTransp(v / 100) end
+        })
+    end
 end
 
 -- =========================================
---  Juego no soportado
--- =========================================
-function UI.SetUnsupported(gameName, Lang)
-    if not _groupboxes.Main then return end
-    _groupboxes.Main:AddLabel(Lang.Get("GAME_UNKNOWN"))
-    _groupboxes.Main:AddLabel(gameName)
-end
-
--- =========================================
---  Tab settings
+--  Tab Settings
 -- =========================================
 function UI.BuildSettings(Config, Lang, UserConfig)
-    if not _tabs.Settings then return end
+    if not _window then return end
 
-    local Box = _tabs.Settings:AddLeftGroupbox("Settings")
+    local tab = _window:AddTab("Settings")
+    _tabs.Settings = tab
 
-    Box:AddDropdown("ZV_Language", {
+    local boxL = tab:AddLeftGroupbox("General")
+
+    boxL:AddDropdown("ZV_Language", {
         Text     = "Idioma / Language",
         Values   = Lang.Available(),
-        Default  = UserConfig.Get("language"),
+        Default  = UserConfig.Get("language") or "ES",
         Callback = function(value)
             UserConfig.Set("language", value)
+            UserConfig.Save()
         end
     })
 
-    Box:AddDropdown("ZV_ToggleKey", {
-        Text     = "Toggle Key",
-        Values   = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home"},
-        Default  = UserConfig.Get("toggleKey") or "RightShift",
+    boxL:AddDropdown("ZV_ToggleKey", {
+        Text    = "Toggle Key",
+        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home"},
+        Default = UserConfig.Get("toggleKey") or "RightShift",
         Callback = function(value)
             UserConfig.Set("toggleKey", value)
+            UserConfig.Save()
             _library.ToggleKeybind = Enum.KeyCode[value]
         end
     })
 
-    Box:AddToggle("ZV_AutoHide", {
+    boxL:AddToggle("ZV_AutoHide", {
         Text     = "Auto Hide",
-        Default  = UserConfig.Get("autoHide"),
+        Default  = UserConfig.Get("autoHide") or false,
         Callback = function(value)
             UserConfig.Set("autoHide", value)
+            UserConfig.Save()
         end
     })
 
-    local BoxR = _tabs.Settings:AddRightGroupbox("Info")
-    BoxR:AddLabel(Config.Name .. "  v" .. Config.Version)
-    BoxR:AddLabel(Lang.Get("UI_AUTHOR") .. " " .. Config.Author)
+    local boxR = tab:AddRightGroupbox("Info")
+    boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
+    boxR:AddLabel("by " .. Config.Author)
 
     print("[UI] Settings OK")
+end
+
+-- =========================================
+--  Watermark con juego detectado
+-- =========================================
+function UI.SetGame(gameName)
+    if not _library then return end
+    _library:SetWatermark("Zerivon | " .. gameName)
 end
 
 -- =========================================
@@ -163,11 +294,11 @@ end
 function UI.Destroy()
     if _library then
         _library:Unload()
-        _library    = nil
-        _window     = nil
-        _tabs       = {}
-        _groupboxes = {}
+        _library = nil
+        _window  = nil
+        _tabs    = {}
         print("[UI] Destruida OK")
     end
 end
+
 return UI
