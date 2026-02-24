@@ -45,20 +45,13 @@ function UI.Init(Config, Lang)
     return true
 end
 
--- Colores predefinidos
+-- =========================================
+--  Colores predefinidos
+-- =========================================
 local COLORS = {
-    "Rojo",
-    "Naranja", 
-    "Amarillo",
-    "Verde",
-    "Cyan",
-    "Azul",
-    "Morado",
-    "Rosa",
-    "Blanco",
-    "Negro",
+    "Rojo", "Naranja", "Amarillo", "Verde",
+    "Cyan", "Azul", "Morado", "Rosa", "Blanco", "Negro",
 }
-
 local COLOR_VALUES = {
     Rojo     = Color3.fromRGB(255, 50,  50),
     Naranja  = Color3.fromRGB(255, 150, 0),
@@ -71,7 +64,6 @@ local COLOR_VALUES = {
     Blanco   = Color3.fromRGB(255, 255, 255),
     Negro    = Color3.fromRGB(20,  20,  20),
 }
-
 local function ColorToName(c)
     local best, bestDist = "Rojo", math.huge
     for name, col in pairs(COLOR_VALUES) do
@@ -81,6 +73,9 @@ local function ColorToName(c)
     return best
 end
 
+-- =========================================
+--  Tab dinamico por juego
+-- =========================================
 function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
     if not _window then return end
 
@@ -88,10 +83,9 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
     _tabs[gameName] = tab
 
     -- ===== AUTO PARRY =====
-    if scripts["Auto Parry"] then
-        local AP  = scripts["Auto Parry"]
+    local AP = scripts["Auto Parry"]
+    if AP then
         local cfg = AP.GetConfig()
-
         local boxL = tab:AddLeftGroupbox("Auto Parry")
 
         boxL:AddToggle("AP_Enabled", {
@@ -111,7 +105,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
         })
 
         boxL:AddSlider("AP_Delay", {
-            Text     = "Max Delay (ms)",
+            Text     = "Max Delay",
             Min      = 0,
             Max      = 500,
             Default  = math.floor(cfg.MaxDelay * 1000),
@@ -124,9 +118,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Text     = "Parry Key",
             Values   = {"F", "Q", "E", "R", "T", "G", "V", "B"},
             Default  = "F",
-            Callback = function(v)
-                AP.SetKey(Enum.KeyCode[v])
-            end
+            Callback = function(v) AP.SetKey(Enum.KeyCode[v]) end
         })
 
         boxL:AddToggle("AP_Log", {
@@ -137,18 +129,15 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
     end
 
     -- ===== ESP =====
-    if scripts["ESP"] then
-        local ESP = scripts["ESP"]
+    local ESP = scripts["ESP"]
+    if ESP then
         local cfg = ESP.GetConfig()
-
         local boxR = tab:AddRightGroupbox("ESP")
 
         boxR:AddToggle("ESP_Enabled", {
             Text     = "Enabled",
             Default  = cfg.Enabled,
             Callback = function(v)
-                cfg.Enabled = v
-                -- Oculta/muestra highlights manualmente
                 if v then
                     ESP.Start()
                 else
@@ -206,8 +195,8 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Callback = function(v) ESP.SetRadiusSize(v) end
         })
 
-        -- Colores
-        local boxR2 = tab:AddRightGroupbox("Colores ESP")
+        -- Colores ESP
+        local boxR2 = tab:AddRightGroupbox("ESP Colors")
 
         boxR2:AddDropdown("ESP_EnemyColor", {
             Text     = "Enemy Color",
@@ -254,6 +243,8 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Callback = function(v) ESP.SetFillTransp(v / 100) end
         })
     end
+
+    print("[UI] Game tab OK → " .. gameName)
 end
 
 -- =========================================
@@ -265,9 +256,9 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     local tab = _window:AddTab("Settings")
     _tabs.Settings = tab
 
+    -- ===== GENERAL =====
     local boxL = tab:AddLeftGroupbox("General")
 
-    -- Toggle manual de la UI
     boxL:AddButton({
         Text = "Toggle Menu",
         Func = function()
@@ -276,14 +267,14 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     })
 
     boxL:AddDropdown("ZV_Language", {
-        Text     = "Idioma / Language",
+        Text     = "Language",
         Values   = Lang.Available(),
         Default  = UserConfig.Get("language") or "ES",
         Callback = function(value)
             UserConfig.Set("language", value)
             UserConfig.Save()
             if _library then
-                _library:Notify("Idioma cambiado a " .. value .. "\nReinicia para aplicar", 3)
+                _library:Notify("Language: " .. value .. "\nRestart to apply", 3)
             end
         end
     })
@@ -303,7 +294,7 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     })
 
     boxL:AddToggle("ZV_AutoHide", {
-        Text     = "Auto Hide al cargar",
+        Text     = "Auto Hide on Load",
         Default  = UserConfig.Get("autoHide") or false,
         Callback = function(value)
             UserConfig.Set("autoHide", value)
@@ -324,20 +315,63 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         end
     })
 
+    -- ===== INFO =====
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
-    boxR:AddLabel("Loaded: Blade Ball")
+    boxR:AddLabel("")
+    boxR:AddLabel("Toggle: RightShift")
     boxR:AddButton({
         Text = "Discord",
         Func = function()
             if _library then
-                _library:Notify("Discord: discord.gg/zerivon", 4)
+                _library:Notify("discord.gg/zerivon", 4)
             end
         end
     })
 
     print("[UI] Settings OK")
+end
+
+-- =========================================
+--  Watermark
+-- =========================================
+function UI.SetGame(gameName)
+    if not _library then return end
+    _library:SetWatermark("Zerivon | " .. gameName)
+end
+
+-- =========================================
+--  Notificacion
+-- =========================================
+function UI.Notify(title, message, duration)
+    if not _library then return end
+    _library:Notify(title .. "\n" .. message, duration or 3)
+end
+
+-- =========================================
+--  Auto hide
+-- =========================================
+function UI.StartAutoHide(delay)
+    task.delay(delay or 6, function()
+        if _library then
+            _library:SetWatermarkVisibility(false)
+            _library:Toggle()
+        end
+    end)
+end
+
+-- =========================================
+--  Destruye la UI
+-- =========================================
+function UI.Destroy()
+    if _library then
+        _library:Unload()
+        _library = nil
+        _window  = nil
+        _tabs    = {}
+        print("[UI] Destruida OK")
+    end
 end
 
 return UI
