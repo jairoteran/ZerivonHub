@@ -93,7 +93,10 @@ UI.BuildSettings(Config, Lang, UserConfig)
 -- =========================================
 task.spawn(function()
     local Stats = game:GetService("Stats")
+    task.wait(1) -- espera a que UI este lista
     while task.wait(0.5) do
+        if not UI or not UI.UpdateWatermark then break end
+
         local balls = workspace:FindFirstChild("Balls")
         local speed  = 0
         local target = "-"
@@ -107,8 +110,8 @@ task.spawn(function()
                 if z then
                     local s = math.floor(z.VectorVelocity.Magnitude)
                     if s > speed then
-                        speed  = s
-                        target = ball:GetAttribute("target") or "-"
+                        speed    = s
+                        target   = ball:GetAttribute("target") or "-"
                         myTarget = target == LP.Name
                     end
                 end
