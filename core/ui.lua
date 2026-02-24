@@ -23,16 +23,11 @@ function UI.Init(Config, Lang)
     local Library, ThemeManager, SaveManager = LoadLinoria()
     _library = Library
 
-    Library:SetWatermark(Config.UI.Watermark)
-    Library:SetWatermarkVisibility(true)
-
     _window = Library:CreateWindow({
         Title    = Config.Name .. " v" .. Config.Version,
         Center   = true,
         AutoShow = Config.UI.ShowOnLoad,
     })
-
-    Library.ToggleKeybind = Config.UI.ToggleKey
 
     ThemeManager:SetLibrary(Library)
     ThemeManager:SetFolder("ZerivonLoader")
@@ -40,6 +35,11 @@ function UI.Init(Config, Lang)
 
     SaveManager:SetLibrary(Library)
     SaveManager:SetFolder("ZerivonLoader")
+
+    task.delay(0.3, function()
+        Library:SetWatermark("Zerivon v" .. Config.Version)
+        Library:SetWatermarkVisibility(true)
+    end)
 
     print("[UI] Inicializada OK")
     return true
@@ -138,11 +138,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Text     = "Enabled",
             Default  = cfg.Enabled,
             Callback = function(v)
-                if v then
-                    ESP.Start()
-                else
-                    ESP.Stop()
-                end
+                if v then ESP.Start() else ESP.Stop() end
             end
         })
 
@@ -195,7 +191,6 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Callback = function(v) ESP.SetRadiusSize(v) end
         })
 
-        -- Colores ESP
         local boxR2 = tab:AddRightGroupbox("ESP Colors")
 
         boxR2:AddDropdown("ESP_EnemyColor", {
@@ -256,13 +251,15 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     local tab = _window:AddTab("Settings")
     _tabs.Settings = tab
 
-    -- ===== GENERAL =====
     local boxL = tab:AddLeftGroupbox("General")
 
-    boxL:AddButton({
-        Text = "Toggle Menu",
-        Func = function()
-            if _library then _library:Toggle() end
+    boxL:AddKeybind("ZV_ToggleKey", {
+        Text    = "Toggle Menu Key",
+        Default = Enum.KeyCode[UserConfig.Get("toggleKey") or "RightShift"],
+        Callback = function(value)
+            local keyName = tostring(value.Name or value)
+            UserConfig.Set("toggleKey", keyName)
+            UserConfig.Save()
         end
     })
 
@@ -279,56 +276,9 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         end
     })
 
-    boxL:AddDropdown("ZV_ToggleKey", {
-        Text    = "Toggle Key",
-        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home", "End"},
-        Default = UserConfig.Get("toggleKey") or "RightShift",
-        Callback = function(value)
-            UserConfig.Set("toggleKey", value)
-            UserConfig.Save()
-            if _library then
-                _library.ToggleKeybind = Enum.KeyCode[value]
-                _library:Notify("Toggle Key → " .. value, 2)
-            end
-        end
-    })
-
-    boxL:AddToggle("ZV_AutoHide", {
-        Text     = "Auto Hide on Load",
-        Default  = UserConfig.Get("autoHide") or false,
-        Callback = function(value)
-            UserConfig.Set("autoHide", value)
-            UserConfig.Save()
-        end
-    })
-
-    boxL:AddSlider("ZV_AutoHideDelay", {
-        Text     = "Auto Hide Delay",
-        Min      = 1,
-        Max      = 30,
-        Default  = UserConfig.Get("autoHideDelay") or 6,
-        Suffix   = "s",
-        Rounding = 0,
-        Callback = function(value)
-            UserConfig.Set("autoHideDelay", value)
-            UserConfig.Save()
-        end
-    })
-
-    -- ===== INFO =====
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
-    boxR:AddLabel("")
-    boxR:AddLabel("Toggle: RightShift")
-    boxR:AddButton({
-        Text = "Discord",
-        Func = function()
-            if _library then
-                _library:Notify("discord.gg/zerivon", 4)
-            end
-        end
-    })
 
     print("[UI] Settings OK")
 end
@@ -338,7 +288,10 @@ end
 -- =========================================
 function UI.SetGame(gameName)
     if not _library then return end
-    _library:SetWatermark("Zerivon | " .. gameName)
+    task.delay(0.5, function()
+        _library:SetWatermark("Zerivon | " .. gameName)
+        _library:SetWatermarkVisibility(true)
+    end)
 end
 
 -- =========================================
@@ -347,18 +300,6 @@ end
 function UI.Notify(title, message, duration)
     if not _library then return end
     _library:Notify(title .. "\n" .. message, duration or 3)
-end
-
--- =========================================
---  Auto hide
--- =========================================
-function UI.StartAutoHide(delay)
-    task.delay(delay or 6, function()
-        if _library then
-            _library:SetWatermarkVisibility(false)
-            _library:Toggle()
-        end
-    end)
 end
 
 -- =========================================
