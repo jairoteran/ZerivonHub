@@ -281,8 +281,6 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     -- Label que se actualiza
     local keyLabelObj = boxL:AddLabel("Toggle Key: " .. savedKey)
 
-    local keyLabelObj = boxL:AddLabel("Toggle Key: " .. savedKey)
-
     boxL:AddButton({
         Text = "Set Toggle Key (press after click)",
         Func = function()
