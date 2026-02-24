@@ -6,63 +6,56 @@
 local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LP         = Players.LocalPlayer
-local RS         = game:GetService("ReplicatedStorage")
 
 local Config = {
-    Enabled          = true,
-
-    -- Jugadores
-    ShowPlayers      = true,
-    EnemyColor       = Color3.fromRGB(255, 50, 50),
-    TargetColor      = Color3.fromRGB(255, 150, 0),  -- jugador al que le toca la pelota
-    FillTransp       = 0.6,
-    OutlineTransp    = 0,
-    ShowNames        = true,
-    ShowDistance     = true,
-    MaxDistance      = 500,
-
-    -- Radio alrededor del personaje
-    ShowRadius       = true,
-    RadiusColor      = Color3.fromRGB(100, 200, 255),
-    RadiusTransp     = 0.6,
-    RadiusSize       = 25,
-
-    -- Pelotas
-    ShowBalls        = true,
-    BallColor        = Color3.fromRGB(255, 220, 0),
-    BallTargetColor  = Color3.fromRGB(255, 50, 50),  -- pelota que te apunta a ti
-    BallFillTransp   = 0.5,
+    Enabled         = true,
+    ShowPlayers     = true,
+    EnemyColor      = Color3.fromRGB(255, 50,  50),
+    TargetColor     = Color3.fromRGB(255, 150, 0),
+    FillTransp      = 0.6,
+    OutlineTransp   = 0,
+    ShowNames       = true,
+    ShowDistance    = true,
+    MaxDistance     = 500,
+    ShowRadius      = true,
+    RadiusColor     = Color3.fromRGB(100, 200, 255),
+    RadiusTransp    = 0.6,
+    RadiusSize      = 25,
+    ShowBalls       = true,
+    BallColor       = Color3.fromRGB(255, 220, 0),
+    BallTargetColor = Color3.fromRGB(255, 50,  50),
+    BallFillTransp  = 0.5,
 }
 
-local _conn        = nil
-local _highlights  = {}  -- player -> {hl, billboard}
-local _ballHL      = {}  -- ball -> SelectionBox
-local _radiusPart  = nil
-local _ballConns   = {}
-local _currentTargets = {}  -- balls -> nombre del target actual
+local _conn       = nil
+local _highlights = {}
+local _ballHL     = {}
+local _radiusPart = nil
+local _ballConns  = {}
+local _currentTargets = {}
 
 -- =========================================
---  Radius ESP en los pies
+--  Radius ESP
 -- =========================================
 local function CreateRadius()
     if _radiusPart then _radiusPart:Destroy() end
     local p = Instance.new("Part")
-    p.Name          = "ZV_Radius"
-    p.Shape         = Enum.PartType.Cylinder
-    p.Anchored      = true
-    p.CanCollide    = false
-    p.CanQuery      = false
-    p.CastShadow    = false
-    p.Material      = Enum.Material.Neon
-    p.Color         = Config.RadiusColor
-    p.Transparency  = Config.RadiusTransp
-    p.Size          = Vector3.new(0.05, Config.RadiusSize * 2, Config.RadiusSize * 2)
-    p.Parent        = workspace
-    _radiusPart     = p
+    p.Name        = "ZV_Radius"
+    p.Shape       = Enum.PartType.Cylinder
+    p.Anchored    = true
+    p.CanCollide  = false
+    p.CanQuery    = false
+    p.CastShadow  = false
+    p.Material    = Enum.Material.Neon
+    p.Color       = Config.RadiusColor
+    p.Transparency = Config.RadiusTransp
+    p.Size        = Vector3.new(0.05, Config.RadiusSize * 2, Config.RadiusSize * 2)
+    p.Parent      = workspace
+    _radiusPart   = p
 end
 
 local function UpdateRadius()
-    if not Config.ShowRadius then
+    if not Config.ShowRadius or not Config.Enabled then
         if _radiusPart then _radiusPart.Transparency = 1 end
         return
     end
@@ -83,7 +76,6 @@ end
 --  Ball ESP
 -- =========================================
 local function AddBallESP(ball)
-    if not Config.ShowBalls then return end
     if _ballHL[ball] then return end
 
     local hl = Instance.new("SelectionBox")
@@ -95,7 +87,6 @@ local function AddBallESP(ball)
     hl.Parent              = workspace
     _ballHL[ball]          = hl
 
-    -- Cambia color segun target
     local conn = ball.AttributeChanged:Connect(function(attr)
         if attr ~= "target" then return end
         local target = ball:GetAttribute("target")
@@ -116,6 +107,13 @@ local function AddBallESP(ball)
     end)
 end
 
+local function RemoveBallESP()
+    for ball, hl in pairs(_ballHL) do
+        hl:Destroy()
+        _ballHL[ball] = nil
+    end
+end
+
 local function InitBallESP()
     local balls = workspace:FindFirstChild("Balls")
     if not balls then return end
@@ -124,7 +122,7 @@ local function InitBallESP()
     end
     local conn = balls.ChildAdded:Connect(function(ball)
         task.wait(0.05)
-        if ball:IsA("BasePart") then AddBallESP(ball) end
+        if ball:IsA("BasePart") and Config.ShowBalls then AddBallESP(ball) end
     end)
     table.insert(_ballConns, conn)
 end
@@ -132,8 +130,7 @@ end
 -- =========================================
 --  Player ESP
 -- =========================================
-local function GetPlayerTarget()
-    -- Retorna el nombre del jugador que tiene la pelota dirigida a el
+local function GetPlayerTargets()
     local targets = {}
     local balls = workspace:FindFirstChild("Balls")
     if balls then
@@ -168,7 +165,7 @@ local function AddPlayerESP(player)
     nameL.Size                   = UDim2.new(1, 0, 0.6, 0)
     nameL.TextColor3             = Config.EnemyColor
     nameL.TextStrokeTransparency = 0
-    nameL.TextStrokeColor3       = Color3.new(0,0,0)
+    nameL.TextStrokeColor3       = Color3.new(0, 0, 0)
     nameL.Font                   = Enum.Font.GothamBold
     nameL.TextScaled             = true
     nameL.Text                   = player.Name
@@ -180,7 +177,7 @@ local function AddPlayerESP(player)
     distL.Position               = UDim2.new(0, 0, 0.6, 0)
     distL.TextColor3             = Color3.fromRGB(220, 220, 220)
     distL.TextStrokeTransparency = 0
-    distL.TextStrokeColor3       = Color3.new(0,0,0)
+    distL.TextStrokeColor3       = Color3.new(0, 0, 0)
     distL.Font                   = Enum.Font.Gotham
     distL.TextScaled             = true
     distL.Text                   = ""
@@ -215,7 +212,7 @@ end
 local function UpdatePlayerESP()
     local myChar = LP.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    local targets = GetPlayerTarget()
+    local targets = GetPlayerTargets()
 
     for player, data in pairs(_highlights) do
         if not player:IsDescendantOf(game) then
@@ -233,20 +230,20 @@ local function UpdatePlayerESP()
         data.bb.Enabled = visible
         if not visible then continue end
 
-        -- Color segun si le toca la pelota
         local isTarget = targets[player.Name] == true
         local color = isTarget and Config.TargetColor or Config.EnemyColor
-        data.hl.OutlineColor  = color
-        data.hl.FillColor     = color
-        data.nameL.TextColor3 = color
-        data.nameL.Text       = player.Name
-        data.nameL.Visible    = Config.ShowNames
-        data.distL.Text       = Config.ShowDistance and (dist .. "m") or ""
+        data.hl.OutlineColor      = color
+        data.hl.FillColor         = color
+        data.hl.FillTransparency  = Config.FillTransp
+        data.nameL.TextColor3     = color
+        data.nameL.Text           = player.Name
+        data.nameL.Visible        = Config.ShowNames
+        data.distL.Text           = Config.ShowDistance and (dist .. "m") or ""
     end
 end
 
 -- =========================================
---  Loop principal
+--  Loop
 -- =========================================
 local function StartLoop()
     _conn = RunService.Heartbeat:Connect(function()
@@ -266,7 +263,7 @@ function ESP.Start()
     for _, p in ipairs(Players:GetPlayers()) do AddPlayerESP(p) end
     Players.PlayerAdded:Connect(AddPlayerESP)
     InitBallESP()
-    StartLoop()
+    if not _conn then StartLoop() end
     print("[ESP] Iniciado")
 end
 
@@ -275,42 +272,49 @@ function ESP.Stop()
     if _conn then _conn:Disconnect(); _conn = nil end
     for _, c in ipairs(_ballConns) do c:Disconnect() end
     _ballConns = {}
-    -- Oculta highlights en vez de destruirlos
+    -- Destruye highlights
     for player, data in pairs(_highlights) do
-        if data.hl then data.hl.Enabled = false end
-        if data.bb then data.bb.Enabled = false end
+        if data.hl and data.hl.Parent then data.hl:Destroy() end
+        if data.bb and data.bb.Parent then data.bb:Destroy() end
     end
-    for _, hl in pairs(_ballHL) do
-        hl.Enabled = false
-    end
+    _highlights = {}
+    RemoveBallESP()
     if _radiusPart then _radiusPart.Transparency = 1 end
     print("[ESP] Detenido")
 end
 
-function ESP.SetEnabled(v)          Config.Enabled        = v end
-function ESP.SetEnemyColor(c)       Config.EnemyColor     = c end
-function ESP.SetTargetColor(c)      Config.TargetColor    = c end
-function ESP.SetFillTransp(t)       Config.FillTransp     = t end
-function ESP.SetShowNames(v)        Config.ShowNames      = v end
-function ESP.SetShowDistance(v)     Config.ShowDistance   = v end
-function ESP.SetMaxDistance(d)      Config.MaxDistance    = d end
-function ESP.SetRadius(v)           Config.ShowRadius     = v end
-function ESP.SetRadiusColor(c)      Config.RadiusColor    = c end
-function ESP.SetRadiusSize(s)       Config.RadiusSize     = s end
-function ESP.SetRadiusTransp(t)     Config.RadiusTransp   = t end
-function ESP.SetBallESP(v)          Config.ShowBalls      = v end
-function ESP.SetBallColor(c)        Config.BallColor      = c end
+function ESP.SetEnabled(v)          Config.Enabled      = v end
+function ESP.SetEnemyColor(c)       Config.EnemyColor   = c end
+function ESP.SetTargetColor(c)      Config.TargetColor  = c end
+function ESP.SetShowNames(v)        Config.ShowNames    = v end
+function ESP.SetShowDistance(v)     Config.ShowDistance = v end
+function ESP.SetMaxDistance(d)      Config.MaxDistance  = d end
+function ESP.SetRadius(v)           Config.ShowRadius   = v end
+function ESP.SetRadiusColor(c)      Config.RadiusColor  = c end
+function ESP.SetRadiusSize(s)       Config.RadiusSize   = s end
+function ESP.SetRadiusTransp(t)     Config.RadiusTransp = t end
+function ESP.SetBallESP(v)
+    Config.ShowBalls = v
+    if not v then RemoveBallESP() end
+end
+function ESP.SetBallColor(c)        Config.BallColor       = c end
 function ESP.SetBallTargetColor(c)  Config.BallTargetColor = c end
-function ESP.GetConfig()            return Config end
-function ESP.IsEnabled()            return Config.Enabled end
 
-ESP.Start()
-
+-- FillTransp — actualiza config y aplica inmediatamente
+function ESP.SetFillTransp(t)
+    Config.FillTransp = t
+end
 function ESP.ApplyFillTransp(t)
+    Config.FillTransp = t
     for _, data in pairs(_highlights) do
         if data.hl then
             data.hl.FillTransparency = t
         end
     end
 end
+
+function ESP.GetConfig()  return Config end
+function ESP.IsEnabled()  return Config.Enabled end
+
+ESP.Start()
 return ESP
