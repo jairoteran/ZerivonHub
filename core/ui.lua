@@ -8,6 +8,7 @@ local UI = {}
 local _library = nil
 local _window  = nil
 local _tabs    = {}
+local _listening = false
 
 local function LoadLinoria()
     local ok1, Library = pcall(function()
@@ -80,6 +81,17 @@ local function ColorToName(c)
         if d < bestDist then bestDist = d; best = name end
     end
     return best
+end
+
+-- =========================================
+--  Aplica toggle keybind
+-- =========================================
+local function ApplyToggleKey(keyName)
+    if not _library then return end
+    _library.ToggleKeybind = {
+        Type  = "KeyPicker",
+        Value = keyName,
+    }
 end
 
 -- =========================================
@@ -237,7 +249,6 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Callback = function(v) ESP.SetRadiusColor(COLOR_VALUES[v]) end
         })
 
-        -- FillTransp — aplica a todos los highlights existentes
         boxR2:AddSlider("ESP_FillTransp", {
             Text     = "Fill Transparency",
             Min      = 0,
@@ -246,10 +257,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Suffix   = "%",
             Rounding = 0,
             Callback = function(v)
-                local t = v / 100
-                ESP.SetFillTransp(t)
-                -- Aplica inmediatamente a todos los highlights
-                ESP.ApplyFillTransp(t)
+                ESP.ApplyFillTransp(v / 100)
             end
         })
     end
@@ -268,24 +276,42 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     local boxL = tab:AddLeftGroupbox("General")
 
-    -- Toggle key via AddToggle + AddKeyPicker
-    local toggleToggle = boxL:AddToggle("ZV_MenuToggle", {
-        Text    = "Menu Toggle Key",
-        Default = false,
-    })
+    -- Muestra la tecla actual
+    local savedKey = UserConfig.Get("toggleKey") or "RightShift"
+    local keyLabel = boxL:AddLabel("Toggle Key: " .. savedKey)
 
-    local keyPicker = toggleToggle:AddKeyPicker("ZV_ToggleKeyPicker", {
-        Text    = "Menu Key",
-        Default = UserConfig.Get("toggleKey") or "RightShift",
-        Changed = function(value)
-            local keyName = tostring(value.Name or value)
-            UserConfig.Set("toggleKey", keyName)
-            UserConfig.Save()
+    -- Boton para capturar tecla
+    boxL:AddButton({
+        Text = "Set Toggle Key (press after click)",
+        Func = function()
+            if _listening then return end
+            _listening = true
+            if _library then
+                _library:Notify("Press any key to set as toggle key...", 3)
+            end
+
+            local UIS = game:GetService("UserInputService")
+            local conn
+            conn = UIS.InputBegan:Connect(function(input, processed)
+                if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+                local keyName = input.KeyCode.Name
+                conn:Disconnect()
+                _listening = false
+
+                -- Aplica
+                ApplyToggleKey(keyName)
+                UserConfig.Set("toggleKey", keyName)
+                UserConfig.Save()
+
+                -- Actualiza label
+                keyLabel.Label.Text = "Toggle Key: " .. keyName
+
+                if _library then
+                    _library:Notify("Toggle Key set to: " .. keyName, 2)
+                end
+            end)
         end
     })
-
-    -- Asignamos el keypicker como ToggleKeybind
-    _library.ToggleKeybind = keyPicker
 
     boxL:AddDropdown("ZV_Language", {
         Text     = "Language",
@@ -300,6 +326,13 @@ function UI.BuildSettings(Config, Lang, UserConfig)
         end
     })
 
+    -- Aplica el keybind guardado
+    if savedKey ~= "RightShift" and savedKey ~= "RightControl" then
+        task.delay(0.5, function()
+            ApplyToggleKey(savedKey)
+        end)
+    end
+
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
@@ -308,19 +341,16 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 end
 
 -- =========================================
---  Watermark con info del juego
+--  Watermark
 -- =========================================
 function UI.SetGame(gameName)
     if not _library then return end
     task.delay(0.5, function()
-        _library:SetWatermark("Zerivon | " .. gameName .. " | AutoParry ON | ESP ON")
+        _library:SetWatermark("Zerivon | " .. gameName)
         _library:SetWatermarkVisibility(true)
     end)
 end
 
--- =========================================
---  Actualiza watermark dinamicamente
--- =========================================
 function UI.UpdateWatermark(info)
     if not _library then return end
     _library:SetWatermark(info)
