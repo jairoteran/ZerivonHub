@@ -275,14 +275,15 @@ function ESP.Stop()
     if _conn then _conn:Disconnect(); _conn = nil end
     for _, c in ipairs(_ballConns) do c:Disconnect() end
     _ballConns = {}
-    for _, d in pairs(_highlights) do
-        if d.hl and d.hl.Parent then d.hl:Destroy() end
-        if d.bb and d.bb.Parent then d.bb:Destroy() end
+    -- Oculta highlights en vez de destruirlos
+    for player, data in pairs(_highlights) do
+        if data.hl then data.hl.Enabled = false end
+        if data.bb then data.bb.Enabled = false end
     end
-    _highlights = {}
-    for _, hl in pairs(_ballHL) do hl:Destroy() end
-    _ballHL = {}
-    if _radiusPart then _radiusPart:Destroy(); _radiusPart = nil end
+    for _, hl in pairs(_ballHL) do
+        hl.Enabled = false
+    end
+    if _radiusPart then _radiusPart.Transparency = 1 end
     print("[ESP] Detenido")
 end
 

@@ -5,9 +5,9 @@
 
 local UI = {}
 
-local _library  = nil
-local _window   = nil
-local _tabs     = {}
+local _library = nil
+local _window  = nil
+local _tabs    = {}
 
 local function LoadLinoria()
     local Library = loadstring(game:HttpGet(
@@ -45,20 +45,51 @@ function UI.Init(Config, Lang)
     return true
 end
 
--- =========================================
---  Tab dinamico por juego
---  scripts = { AutoParry = module, ESP = module }
--- =========================================
+-- Colores predefinidos
+local COLORS = {
+    "Rojo",
+    "Naranja", 
+    "Amarillo",
+    "Verde",
+    "Cyan",
+    "Azul",
+    "Morado",
+    "Rosa",
+    "Blanco",
+    "Negro",
+}
+
+local COLOR_VALUES = {
+    Rojo     = Color3.fromRGB(255, 50,  50),
+    Naranja  = Color3.fromRGB(255, 150, 0),
+    Amarillo = Color3.fromRGB(255, 220, 0),
+    Verde    = Color3.fromRGB(50,  255, 100),
+    Cyan     = Color3.fromRGB(0,   200, 255),
+    Azul     = Color3.fromRGB(50,  100, 255),
+    Morado   = Color3.fromRGB(150, 50,  255),
+    Rosa     = Color3.fromRGB(255, 100, 200),
+    Blanco   = Color3.fromRGB(255, 255, 255),
+    Negro    = Color3.fromRGB(20,  20,  20),
+}
+
+local function ColorToName(c)
+    local best, bestDist = "Rojo", math.huge
+    for name, col in pairs(COLOR_VALUES) do
+        local d = (c.R-col.R)^2 + (c.G-col.G)^2 + (c.B-col.B)^2
+        if d < bestDist then bestDist = d; best = name end
+    end
+    return best
+end
+
 function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
     if not _window then return end
 
-    -- Tab con nombre del juego
     local tab = _window:AddTab(gameName)
     _tabs[gameName] = tab
 
     -- ===== AUTO PARRY =====
-    if scripts.AutoParry then
-        local AP = scripts.AutoParry
+    if scripts["Auto Parry"] then
+        local AP  = scripts["Auto Parry"]
         local cfg = AP.GetConfig()
 
         local boxL = tab:AddLeftGroupbox("Auto Parry")
@@ -70,29 +101,29 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
         })
 
         boxL:AddSlider("AP_Precision", {
-            Text    = "Precision",
-            Min     = 0,
-            Max     = 100,
-            Default = math.floor(cfg.Precision * 100),
-            Suffix  = "%",
+            Text     = "Precision",
+            Min      = 0,
+            Max      = 100,
+            Default  = math.floor(cfg.Precision * 100),
+            Suffix   = "%",
             Rounding = 0,
             Callback = function(v) AP.SetPrecision(v / 100) end
         })
 
         boxL:AddSlider("AP_Delay", {
-            Text    = "Max Delay (ms)",
-            Min     = 0,
-            Max     = 500,
-            Default = math.floor(cfg.MaxDelay * 1000),
-            Suffix  = "ms",
+            Text     = "Max Delay (ms)",
+            Min      = 0,
+            Max      = 500,
+            Default  = math.floor(cfg.MaxDelay * 1000),
+            Suffix   = "ms",
             Rounding = 0,
             Callback = function(v) cfg.MaxDelay = v / 1000 end
         })
 
         boxL:AddDropdown("AP_Key", {
-            Text   = "Parry Key",
-            Values = {"F", "Q", "E", "R", "T", "G", "V", "B"},
-            Default = "F",
+            Text     = "Parry Key",
+            Values   = {"F", "Q", "E", "R", "T", "G", "V", "B"},
+            Default  = "F",
             Callback = function(v)
                 AP.SetKey(Enum.KeyCode[v])
             end
@@ -106,8 +137,8 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
     end
 
     -- ===== ESP =====
-    if scripts.ESP then
-        local ESP = scripts.ESP
+    if scripts["ESP"] then
+        local ESP = scripts["ESP"]
         local cfg = ESP.GetConfig()
 
         local boxR = tab:AddRightGroupbox("ESP")
@@ -115,7 +146,15 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
         boxR:AddToggle("ESP_Enabled", {
             Text     = "Enabled",
             Default  = cfg.Enabled,
-            Callback = function(v) ESP.SetEnabled(v) end
+            Callback = function(v)
+                cfg.Enabled = v
+                -- Oculta/muestra highlights manualmente
+                if v then
+                    ESP.Start()
+                else
+                    ESP.Stop()
+                end
+            end
         })
 
         boxR:AddToggle("ESP_Players", {
@@ -168,36 +207,41 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
         })
 
         -- Colores
-        local boxR2 = tab:AddRightGroupbox("Colores")
+        local boxR2 = tab:AddRightGroupbox("Colores ESP")
 
-        boxR2:AddLabel("Enemy Color")
-        boxR2:AddColorPicker("ESP_EnemyColor", {
-            Default  = cfg.EnemyColor,
-            Callback = function(v) ESP.SetEnemyColor(v) end
+        boxR2:AddDropdown("ESP_EnemyColor", {
+            Text     = "Enemy Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.EnemyColor),
+            Callback = function(v) ESP.SetEnemyColor(COLOR_VALUES[v]) end
         })
 
-        boxR2:AddLabel("Target Color (pelota dirigida)")
-        boxR2:AddColorPicker("ESP_TargetColor", {
-            Default  = cfg.TargetColor,
-            Callback = function(v) ESP.SetTargetColor(v) end
+        boxR2:AddDropdown("ESP_TargetColor", {
+            Text     = "Target Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.TargetColor),
+            Callback = function(v) ESP.SetTargetColor(COLOR_VALUES[v]) end
         })
 
-        boxR2:AddLabel("Ball Color")
-        boxR2:AddColorPicker("ESP_BallColor", {
-            Default  = cfg.BallColor,
-            Callback = function(v) ESP.SetBallColor(v) end
+        boxR2:AddDropdown("ESP_BallColor", {
+            Text     = "Ball Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.BallColor),
+            Callback = function(v) ESP.SetBallColor(COLOR_VALUES[v]) end
         })
 
-        boxR2:AddLabel("Ball Target Color")
-        boxR2:AddColorPicker("ESP_BallTargetColor", {
-            Default  = cfg.BallTargetColor,
-            Callback = function(v) ESP.SetBallTargetColor(v) end
+        boxR2:AddDropdown("ESP_BallTargetColor", {
+            Text     = "Ball Target Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.BallTargetColor),
+            Callback = function(v) ESP.SetBallTargetColor(COLOR_VALUES[v]) end
         })
 
-        boxR2:AddLabel("Radius Color")
-        boxR2:AddColorPicker("ESP_RadiusColor", {
-            Default  = cfg.RadiusColor,
-            Callback = function(v) ESP.SetRadiusColor(v) end
+        boxR2:AddDropdown("ESP_RadiusColor", {
+            Text     = "Radius Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.RadiusColor),
+            Callback = function(v) ESP.SetRadiusColor(COLOR_VALUES[v]) end
         })
 
         boxR2:AddSlider("ESP_FillTransp", {
@@ -260,25 +304,16 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     print("[UI] Settings OK")
 end
 
--- =========================================
---  Watermark con juego detectado
--- =========================================
 function UI.SetGame(gameName)
     if not _library then return end
     _library:SetWatermark("Zerivon | " .. gameName)
 end
 
--- =========================================
---  Notificacion
--- =========================================
 function UI.Notify(title, message, duration)
     if not _library then return end
     _library:Notify(title .. "\n" .. message, duration or 3)
 end
 
--- =========================================
---  Auto hide
--- =========================================
 function UI.StartAutoHide(delay)
     task.delay(delay or 6, function()
         if _library then
@@ -288,9 +323,6 @@ function UI.StartAutoHide(delay)
     end)
 end
 
--- =========================================
---  Destruye la UI
--- =========================================
 function UI.Destroy()
     if _library then
         _library:Unload()
