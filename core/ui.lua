@@ -281,6 +281,8 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     -- Label que se actualiza
     local keyLabelObj = boxL:AddLabel("Toggle Key: " .. savedKey)
 
+    local keyLabelObj = boxL:AddLabel("Toggle Key: " .. savedKey)
+
     boxL:AddButton({
         Text = "Set Toggle Key (press after click)",
         Func = function()
@@ -302,15 +304,8 @@ function UI.BuildSettings(Config, Lang, UserConfig)
                 UserConfig.Set("toggleKey", keyName)
                 UserConfig.Save()
 
-                -- Actualiza el label
-                pcall(function()
-                    for _, v in ipairs(keyLabelObj:GetDescendants()) do
-                        if v:IsA("TextLabel") then
-                            v.Text = "Toggle Key: " .. keyName
-                            break
-                        end
-                    end
-                end)
+                -- Actualiza el label correctamente
+                keyLabelObj:SetText("Toggle Key: " .. keyName)
 
                 if _library then
                     _library:Notify("Toggle Key → " .. keyName, 2)
