@@ -278,7 +278,38 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     -- Muestra la tecla actual
     local savedKey = UserConfig.Get("toggleKey") or "RightShift"
-    local keyLabel = boxL:AddLabel("Toggle Key: " .. savedKey)
+    -- Variable para trackear la tecla mostrada
+    local currentKey = savedKey
+
+    boxL:AddLabel("Toggle Key: " .. currentKey)
+
+    boxL:AddButton({
+        Text = "Set Toggle Key (press after click)",
+        Func = function()
+            if _listening then return end
+            _listening = true
+            if _library then
+                _library:Notify("Press any key...", 3)
+            end
+
+            local UIS = game:GetService("UserInputService")
+            local conn
+            conn = UIS.InputBegan:Connect(function(input, processed)
+                if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+                local keyName = input.KeyCode.Name
+                conn:Disconnect()
+                _listening = false
+
+                ApplyToggleKey(keyName)
+                UserConfig.Set("toggleKey", keyName)
+                UserConfig.Save()
+
+                if _library then
+                    _library:Notify("Toggle Key → " .. keyName, 2)
+                end
+            end)
+        end
+    })
 
     -- Boton para capturar tecla
     boxL:AddButton({
@@ -303,8 +334,6 @@ function UI.BuildSettings(Config, Lang, UserConfig)
                 UserConfig.Set("toggleKey", keyName)
                 UserConfig.Save()
 
-                -- Actualiza label
-                keyLabel.Label.Text = "Toggle Key: " .. keyName
 
                 if _library then
                     _library:Notify("Toggle Key set to: " .. keyName, 2)
