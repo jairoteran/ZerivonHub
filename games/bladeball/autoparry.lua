@@ -1,7 +1,6 @@
 -- =========================================
 --  Zerivon Loader by Khayro
 --  games/bladeball/autoparry.lua
---  Auto Parry configurable para Blade Ball
 -- =========================================
 
 local VIM        = game:GetService("VirtualInputManager")
@@ -9,217 +8,105 @@ local RunService = game:GetService("RunService")
 local LP         = game:GetService("Players").LocalPlayer
 local RS         = game:GetService("ReplicatedStorage")
 
--- =========================================
---  Configuracion
--- =========================================
 local Config = {
-    Enabled       = true,
-    Distance      = 25,
-    Cooldown      = 0.3,
-    ParryKey      = Enum.KeyCode.F,
-    HoldTime      = 0.05,
-    Precision     = 1.0,
-    MaxDelay      = 0.15,
-
-    -- Visual
-    ShowRadiusESP = true,     -- circulo alrededor del personaje
-    RadiusColor   = Color3.fromRGB(100, 200, 255),
-    ShowBallESP   = true,     -- highlight en pelotas
-    BallColor     = Color3.fromRGB(255, 200, 0),
-    ESPTransp     = 0.6,
-
-    ShowParryLog  = true,
+    Enabled     = true,
+    ParryKey    = Enum.KeyCode.F,
+    HoldTime    = 0.05,
+    Precision   = 1.0,
+    MaxDelay    = 0.25,
+    ShowLog     = true,
 }
 
--- =========================================
---  Estado
--- =========================================
-local _last       = 0
-local _conn       = nil
-local _highlights = {}
-local _radiusPart = nil
+local ping          = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+local ParryButton   = RS.Remotes:FindFirstChild("ParryButtonPress")
+local _parriedBalls = {}
+local _lastParry    = 0
+local _ballConns    = {}
+local _conn         = nil
+local _count        = 0
+local _success      = 0
 
--- =========================================
---  Crea el circulo de radio alrededor
---  del personaje
--- =========================================
-local function CreateRadiusESP()
-    if _radiusPart then _radiusPart:Destroy() end
+local PARRY_RADIUS = 15
+local pingSec      = ping / 1000
 
-    local part = Instance.new("Part")
-    part.Name      = "ZV_RadiusESP"
-    part.Shape     = Enum.PartType.Cylinder
-    part.Anchored  = true
-    part.CanCollide = false
-    part.CanQuery  = false
-    part.CastShadow = false
-    part.Material  = Enum.Material.Neon
-    part.Color     = Config.RadiusColor
-    part.Transparency = Config.ESPTransp
-    part.Size      = Vector3.new(0.1, Config.Distance * 2, Config.Distance * 2)
-    part.Parent    = workspace
-
-    _radiusPart = part
+local function GetDelay()
+    local base = Config.MaxDelay * (1 - Config.Precision)
+    if base <= 0 then return 0 end
+    return base + (math.random() * base * 0.2)
 end
 
-local function UpdateRadiusESP()
-    if not Config.ShowRadiusESP then
-        if _radiusPart then
-            _radiusPart.Transparency = 1
-        end
-        return
-    end
+local function DoParry(ball, dist)
+    local now = tick()
+    if _parriedBalls[ball] and now - _parriedBalls[ball] < 1.5 then return end
+    if now - _lastParry < 0.3 then return end
+    _lastParry = now
+    _parriedBalls[ball] = now
+    _count = _count + 1
 
-    local char = LP.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    if not _radiusPart or not _radiusPart.Parent then
-        CreateRadiusESP()
-    end
-
-    -- Actualiza posicion y tamaño
-    _radiusPart.Transparency = Config.ESPTransp
-    _radiusPart.Color        = Config.RadiusColor
-    _radiusPart.Size         = Vector3.new(0.1, Config.Distance * 2, Config.Distance * 2)
-    _radiusPart.CFrame       = CFrame.new(hrp.Position) * CFrame.Angles(0, 0, math.pi / 2)
-end
-
--- =========================================
---  ESP en pelotas
--- =========================================
-local function AddBallESP(ball)
-    if not Config.ShowBallESP then return end
-    if _highlights[ball] then return end
-
-    local hl = Instance.new("SelectionBox")
-    hl.Adornee           = ball
-    hl.Color3            = Config.BallColor
-    hl.LineThickness     = 0.05
-    hl.SurfaceTransparency = 0.7
-    hl.SurfaceColor3     = Config.BallColor
-    hl.Parent            = workspace
-
-    _highlights[ball] = hl
-
-    ball.AncestryChanged:Connect(function()
-        if not ball:IsDescendantOf(workspace) then
-            hl:Destroy()
-            _highlights[ball] = nil
+    local delay = GetDelay()
+    task.delay(delay, function()
+        pcall(function()
+            VIM:SendKeyEvent(true,  Config.ParryKey, false, game)
+            task.wait(Config.HoldTime)
+            VIM:SendKeyEvent(false, Config.ParryKey, false, game)
+        end)
+        pcall(function() if ParryButton then ParryButton:Fire() end end)
+        if Config.ShowLog then
+            print(string.format("[AutoParry #%d] dist=%.1f delay=%.3fs", _count, dist, delay))
         end
     end)
 end
 
--- =========================================
---  Verifica si la pelota va hacia MI
---  personaje y no hacia otro jugador
--- =========================================
-local function IsBallTargetingMe(ball, myPos)
-    local zoomies = ball:FindFirstChild("zoomies")
-    if not zoomies then return false end
-
-    local vel = zoomies.VectorVelocity
-    if vel.Magnitude < 5 then return false end
-
-    local ballPos  = ball.Position
-    local velDir   = vel.Unit
-    local toMe     = (myPos - ballPos).Unit
-    local dotMe    = toMe:Dot(velDir)
-
-    -- La pelota debe apuntar hacia mi (dot > 0.5)
-    if dotMe < 0.5 then return false end
-
-    -- Verificamos que no hay otro jugador mas cercano
-    -- en la direccion de la pelota
-    local Players = game:GetService("Players")
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player == LP then continue end
-        local char = player.Character
-        if not char then continue end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
-
-        local toOther = (hrp.Position - ballPos).Unit
-        local dotOther = toOther:Dot(velDir)
-
-        -- Si otro jugador esta mas en la linea de fuego que yo
-        local distOther = (hrp.Position - ballPos).Magnitude
-        local distMe    = (myPos - ballPos).Magnitude
-
-        if dotOther > dotMe and distOther < distMe then
-            return false
+local function ConnectBall(ball)
+    if not ball:IsA("BasePart") then return end
+    if not ball:GetAttribute("realBall") then return end
+    local c = ball.AttributeChanged:Connect(function(attr)
+        if attr ~= "target" then return end
+        if ball:GetAttribute("target") ~= LP.Name then
+            _parriedBalls[ball] = nil
         end
-    end
-
-    return true
+    end)
+    table.insert(_ballConns, c)
 end
 
--- =========================================
---  Delay segun precision
--- =========================================
-local function GetDelay()
-    local delay = Config.MaxDelay * (1 - Config.Precision)
-    if delay > 0 then
-        delay = delay + (math.random() * delay * 0.3)
-    end
-    return delay
+local function InitBalls()
+    local balls = workspace:FindFirstChild("Balls")
+    if not balls then return end
+    for _, b in ipairs(balls:GetChildren()) do ConnectBall(b) end
+    local c1 = balls.ChildAdded:Connect(function(b) task.wait(0.05); ConnectBall(b) end)
+    local c2 = balls.ChildRemoved:Connect(function(b) _parriedBalls[b] = nil end)
+    table.insert(_ballConns, c1)
+    table.insert(_ballConns, c2)
 end
 
--- =========================================
---  Loop principal
--- =========================================
 local function StartLoop()
     _conn = RunService.Heartbeat:Connect(function()
         if not Config.Enabled then return end
-
+        local bs = workspace:FindFirstChild("Balls")
+        if not bs then return end
         local char = LP.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
         local myPos = hrp.Position
 
-        local balls = workspace:FindFirstChild("Balls")
-        if not balls then return end
-
-        -- Actualiza radio ESP
-        UpdateRadiusESP()
-
-        -- Actualiza ball ESP
-        if Config.ShowBallESP then
-            for _, ball in ipairs(balls:GetChildren()) do
-                if ball:IsA("BasePart") then
-                    AddBallESP(ball)
-                end
-            end
-        end
-
-        local now = tick()
-        if now - _last < Config.Cooldown then return end
-
-        for _, ball in ipairs(balls:GetChildren()) do
+        for _, ball in ipairs(bs:GetChildren()) do
             if not ball:IsA("BasePart") then continue end
+            if ball:GetAttribute("target") ~= LP.Name then continue end
 
             local dist = (myPos - ball.Position).Magnitude
-            if dist > Config.Distance then continue end
+            local zoomies = ball:FindFirstChild("zoomies")
+            local speed = zoomies and zoomies.VectorVelocity.Magnitude or 0
 
-            -- Solo parry si la pelota va hacia mi
-            if not IsBallTargetingMe(ball, myPos) then continue end
+            local shouldParry = false
+            if dist <= PARRY_RADIUS then
+                shouldParry = true
+            elseif speed > 1 then
+                local timeToHit = (dist - PARRY_RADIUS) / speed
+                shouldParry = timeToHit <= pingSec + 0.05
+            end
 
-            _last = now
-            local delay = GetDelay()
-
-            task.delay(delay, function()
-                pcall(function()
-                    VIM:SendKeyEvent(true,  Config.ParryKey, false, game)
-                    task.wait(Config.HoldTime)
-                    VIM:SendKeyEvent(false, Config.ParryKey, false, game)
-                end)
-                if Config.ShowParryLog then
-                    print(string.format("[AutoParry] Parry! dist=%.1f delay=%.3f", dist, delay))
-                end
-            end)
-            break
+            if shouldParry then DoParry(ball, dist) end
         end
     end)
 end
@@ -231,41 +118,27 @@ local AutoParry = {}
 
 function AutoParry.Start()
     Config.Enabled = true
-    if not _conn then StartLoop() end
-    print("[AutoParry] Iniciado")
+    InitBalls()
+    StartLoop()
+    print("[AutoParry] Iniciado — ping=" .. math.floor(ping) .. "ms")
 end
 
 function AutoParry.Stop()
     Config.Enabled = false
-    if _conn then
-        _conn:Disconnect()
-        _conn = nil
-    end
-    if _radiusPart then
-        _radiusPart:Destroy()
-        _radiusPart = nil
-    end
-    for _, hl in pairs(_highlights) do
-        hl:Destroy()
-    end
-    _highlights = {}
+    if _conn then _conn:Disconnect(); _conn = nil end
+    for _, c in ipairs(_ballConns) do c:Disconnect() end
+    _ballConns    = {}
+    _parriedBalls = {}
     print("[AutoParry] Detenido")
 end
 
-function AutoParry.SetEnabled(v)       Config.Enabled      = v; if v and not _conn then StartLoop() end end
-function AutoParry.SetDistance(d)      Config.Distance     = d  end
-function AutoParry.SetCooldown(c)      Config.Cooldown     = c  end
-function AutoParry.SetPrecision(p)     Config.Precision    = math.clamp(p, 0, 1) end
-function AutoParry.SetKey(k)           Config.ParryKey     = k  end
-function AutoParry.SetRadiusESP(v)     Config.ShowRadiusESP = v end
-function AutoParry.SetRadiusColor(c)   Config.RadiusColor  = c  end
-function AutoParry.SetBallESP(v)       Config.ShowBallESP  = v  end
-function AutoParry.SetBallColor(c)     Config.BallColor    = c  end
-function AutoParry.SetTransparency(t)  Config.ESPTransp    = t  end
-function AutoParry.SetLog(v)           Config.ShowParryLog = v  end
-function AutoParry.GetConfig()         return Config            end
-function AutoParry.IsEnabled()         return Config.Enabled    end
+function AutoParry.SetEnabled(v)   Config.Enabled   = v end
+function AutoParry.SetPrecision(p) Config.Precision = math.clamp(p, 0, 1) end
+function AutoParry.SetKey(k)       Config.ParryKey  = k end
+function AutoParry.SetLog(v)       Config.ShowLog   = v end
+function AutoParry.GetStats()      return { count = _count, success = _success, ping = math.floor(ping) } end
+function AutoParry.GetConfig()     return Config end
+function AutoParry.IsEnabled()     return Config.Enabled end
 
 AutoParry.Start()
-
 return AutoParry
