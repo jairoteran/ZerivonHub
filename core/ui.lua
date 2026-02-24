@@ -123,7 +123,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
 
         boxL:AddToggle("AP_Log", {
             Text     = "Show Log",
-            Default  = cfg.ShowLog,
+            Default  = false,
             Callback = function(v) AP.SetLog(v) end
         })
     end
