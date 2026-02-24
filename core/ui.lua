@@ -228,6 +228,7 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Callback = function(v) ESP.SetRadiusColor(COLOR_VALUES[v]) end
         })
 
+        -- FillTransp — aplica a todos los highlights existentes
         boxR2:AddSlider("ESP_FillTransp", {
             Text     = "Fill Transparency",
             Min      = 0,
@@ -235,7 +236,12 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
             Default  = math.floor(cfg.FillTransp * 100),
             Suffix   = "%",
             Rounding = 0,
-            Callback = function(v) ESP.SetFillTransp(v / 100) end
+            Callback = function(v)
+                local t = v / 100
+                ESP.SetFillTransp(t)
+                -- Aplica inmediatamente a todos los highlights
+                ESP.ApplyFillTransp(t)
+            end
         })
     end
 
@@ -253,13 +259,16 @@ function UI.BuildSettings(Config, Lang, UserConfig)
 
     local boxL = tab:AddLeftGroupbox("General")
 
-    boxL:AddKeybind("ZV_ToggleKey", {
+    boxL:AddDropdown("ZV_ToggleKey", {
         Text    = "Toggle Menu Key",
-        Default = Enum.KeyCode[UserConfig.Get("toggleKey") or "RightShift"],
+        Values  = {"RightShift", "LeftAlt", "F1", "F2", "F3", "Insert", "Home", "End"},
+        Default = UserConfig.Get("toggleKey") or "RightShift",
         Callback = function(value)
-            local keyName = tostring(value.Name or value)
-            UserConfig.Set("toggleKey", keyName)
+            UserConfig.Set("toggleKey", value)
             UserConfig.Save()
+            if _library then
+                _library:Notify("Toggle Key → " .. value .. "\nRestart to apply", 2)
+            end
         end
     })
 
@@ -279,19 +288,28 @@ function UI.BuildSettings(Config, Lang, UserConfig)
     local boxR = tab:AddRightGroupbox("Info")
     boxR:AddLabel(Config.Name .. "  v" .. Config.Version)
     boxR:AddLabel("by " .. Config.Author)
+    boxR:AddLabel("Toggle: " .. (UserConfig.Get("toggleKey") or "RightShift"))
 
     print("[UI] Settings OK")
 end
 
 -- =========================================
---  Watermark
+--  Watermark con info del juego
 -- =========================================
 function UI.SetGame(gameName)
     if not _library then return end
     task.delay(0.5, function()
-        _library:SetWatermark("Zerivon | " .. gameName)
+        _library:SetWatermark("Zerivon | " .. gameName .. " | AutoParry ON | ESP ON")
         _library:SetWatermarkVisibility(true)
     end)
+end
+
+-- =========================================
+--  Actualiza watermark dinamicamente
+-- =========================================
+function UI.UpdateWatermark(info)
+    if not _library then return end
+    _library:SetWatermark(info)
 end
 
 -- =========================================

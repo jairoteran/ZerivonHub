@@ -305,4 +305,12 @@ function ESP.GetConfig()            return Config end
 function ESP.IsEnabled()            return Config.Enabled end
 
 ESP.Start()
+
+function ESP.ApplyFillTransp(t)
+    for _, data in pairs(_highlights) do
+        if data.hl then
+            data.hl.FillTransparency = t
+        end
+    end
+end
 return ESP
