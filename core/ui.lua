@@ -272,6 +272,54 @@ function UI.BuildGameTab(gameName, scripts, Lang, UserConfig)
         })
     end
 
+-- ===== PREDICTOR =====
+    local PRED = scripts["Predictor"]
+    if PRED then
+        local cfg = PRED.GetConfig()
+        local boxP = tab:AddLeftGroupbox("Ball Predictor")
+
+        boxP:AddToggle("PRED_Enabled", {
+            Text     = "Enabled",
+            Default  = cfg.Enabled,
+            Callback = function(v) PRED.SetEnabled(v) end
+        })
+
+        boxP:AddToggle("PRED_OnlyTarget", {
+            Text     = "Only When Targeted",
+            Default  = cfg.OnlyTarget,
+            Callback = function(v) PRED.SetOnlyTarget(v) end
+        })
+
+        boxP:AddToggle("PRED_Dot", {
+            Text     = "Impact Dot",
+            Default  = cfg.ShowDot,
+            Callback = function(v) PRED.SetShowDot(v) end
+        })
+
+        boxP:AddSlider("PRED_Steps", {
+            Text     = "Trail Length",
+            Min      = 4,
+            Max      = 20,
+            Default  = cfg.Steps,
+            Rounding = 0,
+            Callback = function(v) PRED.SetSteps(v) end
+        })
+
+        boxP:AddDropdown("PRED_Color", {
+            Text     = "Danger Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.Color),
+            Callback = function(v) PRED.SetColor(COLOR_VALUES[v]) end
+        })
+
+        boxP:AddDropdown("PRED_ColorSafe", {
+            Text     = "Safe Color",
+            Values   = COLORS,
+            Default  = ColorToName(cfg.ColorSafe),
+            Callback = function(v) PRED.SetColorSafe(COLOR_VALUES[v]) end
+        })
+    end
+
     print("[UI] Game tab OK → " .. gameName)
 end
 

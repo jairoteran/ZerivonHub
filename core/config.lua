@@ -16,7 +16,6 @@ Config.Theme = {
 Config.UI = {
     ToggleKey     = Enum.KeyCode.RightShift,
     ShowOnLoad    = true,
-    AutoHideDelay = 6,           -- segundos antes de ocultar al cargar
     Watermark     = "Zerivon Loader  v0.0.1  by Khayro",
 }
 
@@ -42,6 +41,11 @@ Config.Games = {
                 Name    = "ESP",
                 Enabled = true,
                 URL     = "games/bladeball/esp.lua",
+            },
+            {
+                Name    = "Predictor",
+                Enabled = true,
+                URL     = "games/bladeball/predictor.lua",
             },
         }
     },

@@ -187,11 +187,18 @@ local function AddPlayerESP(player)
 
     local function OnChar(char)
         if not char then return end
-        local hrp = char:WaitForChild("HumanoidRootPart", 5)
-        hl.Adornee = char
-        bb.Adornee = hrp or char
-        hl.Parent  = char
-        bb.Parent  = char
+        local ok, err = pcall(function()
+            local hrp = char:WaitForChild("HumanoidRootPart", 5)
+            if not hrp then return end
+            if not char:IsDescendantOf(game) then return end
+            hl.Adornee = char
+            bb.Adornee = hrp
+            hl.Parent  = char
+            bb.Parent  = char
+        end)
+        if not ok then
+            -- personaje destruido antes de asignar, ignoramos
+        end
     end
 
     if player.Character then OnChar(player.Character) end
