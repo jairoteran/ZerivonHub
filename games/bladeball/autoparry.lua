@@ -65,6 +65,7 @@ local function GetDynamicRadius()
     end
 end
 
+local PARRY_RADIUS  = 15
 local ParryButton   = RS.Remotes:FindFirstChild("ParryButtonPress")
 local _parriedBalls = {}
 local _lastParry    = 0
@@ -72,8 +73,6 @@ local _ballConns    = {}
 local _conn         = nil
 local _count        = 0
 local _fails        = 0
-
-local PARRY_RADIUS = 15
 
 local function GetDelay()
     local base = Config.MaxDelay * (1 - Config.Precision)
